@@ -7,7 +7,7 @@ describe("Election", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
-  async function deployOneYearLockFixture() {
+  async function deployElectionFixture() {
     const [owner, candidate1, candidate2, voter1, voter2, voter3] =
       await ethers.getSigners();
 
@@ -25,9 +25,9 @@ describe("Election", function () {
   }
 
   describe("Deployment", function () {
-    it("Should register candidates ", async function () {
+    it("Should register the right candidates ", async function () {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
       const isCandidate1Registered = election.candidates(
         participants.candidate1.getAddress()
@@ -41,7 +41,7 @@ describe("Election", function () {
     });
 
     it("Should set the right registrationFee", async function () {
-      const { election } = await loadFixture(deployOneYearLockFixture);
+      const { election } = await loadFixture(deployElectionFixture);
 
       expect(await election.registrationFee()).to.equal(
         ethers.utils.parseEther("1")
@@ -52,7 +52,7 @@ describe("Election", function () {
   describe("Registration", function () {
     it("should be able to register", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
 
       const electionAsVoter1 = election.connect(participants.voter1);
@@ -68,7 +68,7 @@ describe("Election", function () {
 
     it("should be able to register if fee insufficient", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
       const electionAsVoter1 = election.connect(participants.voter1);
       await expect(
@@ -80,7 +80,7 @@ describe("Election", function () {
 
     it("should not be able too register if voter has already registered", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
 
       const electionAsVoter1 = election.connect(participants.voter1);
@@ -99,24 +99,24 @@ describe("Election", function () {
   describe("Vote", () => {
     it("should be able to votes", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
       const registrationFee = await election.registrationFee();
 
-      const electionAsVote1 = election.connect(participants.voter1);
-      const electionAsVote2 = election.connect(participants.voter2);
-      const electionAsVote3 = election.connect(participants.voter3);
+      const electionAsVoter1 = election.connect(participants.voter1);
+      const electionAsVoter2 = election.connect(participants.voter2);
+      const electionAsVoter3 = election.connect(participants.voter3);
 
-      await electionAsVote1.register({ value: registrationFee });
-      await electionAsVote2.register({ value: registrationFee });
-      await electionAsVote3.register({ value: registrationFee });
+      await electionAsVoter1.register({ value: registrationFee });
+      await electionAsVoter2.register({ value: registrationFee });
+      await electionAsVoter3.register({ value: registrationFee });
 
       const candidate1Address = await participants.candidate1.getAddress();
       const candidate2Address = await participants.candidate2.getAddress();
 
-      const vote1 = await electionAsVote1.vote(candidate1Address);
-      const vote2 = await electionAsVote2.vote(candidate1Address);
-      const vote3 = await electionAsVote3.vote(candidate2Address);
+      const vote1 = await electionAsVoter1.vote(candidate1Address);
+      const vote2 = await electionAsVoter2.vote(candidate1Address);
+      const vote3 = await electionAsVoter3.vote(candidate2Address);
 
       const voter1Address = await participants.voter1.getAddress();
       const voter2Address = await participants.voter2.getAddress();
@@ -142,39 +142,39 @@ describe("Election", function () {
 
     it("should not allow vote if voter is not registered", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
 
-      const electionAsVote1 = election.connect(participants.voter1);
+      const electionAsVoter1 = election.connect(participants.voter1);
 
       const candidate1Address = await participants.candidate1.getAddress();
 
-      await expect(electionAsVote1.vote(candidate1Address)).to.be.revertedWith(
+      await expect(electionAsVoter1.vote(candidate1Address)).to.be.revertedWith(
         "Voter is not registered"
       );
     });
 
     it("should not allow vote if candidate is not registered", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
 
       const electionAsVote1 = election.connect(participants.voter1);
 
-      const unknownCandidate1Address = await participants.voter2.getAddress();
+      const unknownCandidateAddress = await participants.voter2.getAddress();
 
       const registrationFee = await election.registrationFee();
 
       await electionAsVote1.register({ value: registrationFee });
 
       await expect(
-        electionAsVote1.vote(unknownCandidate1Address)
+        electionAsVote1.vote(unknownCandidateAddress)
       ).to.be.revertedWith("Candidate is not registered");
     });
 
     it("should not allow vote if voter has already voted", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
 
       const electionAsVote1 = election.connect(participants.voter1);
@@ -196,7 +196,7 @@ describe("Election", function () {
   describe("Close", () => {
     it("owner should be able to close the election", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
       const registrationFee = await election.registrationFee();
 
@@ -214,12 +214,13 @@ describe("Election", function () {
         participants.owner,
         registrationFee.mul(ethers.BigNumber.from(3))
       );
+      expect(close).to.emit(election, 'Closed').withArgs(anyValue());
       expect(await election.isClosed()).to.be.true;
     });
 
     it("should not be able to register and vote if election has been closed", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
 
       await election.close();
@@ -240,7 +241,7 @@ describe("Election", function () {
 
     it("owner should be the only one able to close ", async () => {
       const { election, participants } = await loadFixture(
-        deployOneYearLockFixture
+        deployElectionFixture
       );
 
       await expect(
