@@ -1,18 +1,15 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  const [owner, candidate1, candidate2] = await ethers.getSigners();
+  const candidates = await Promise.all([candidate1.getAddress(), candidate2.getAddress()]);
+  const Election = await ethers.getContractFactory("Election");
+  const election = await Election.deploy(candidates, ethers.utils.parseEther('1'));
 
-  const lockedAmount = ethers.utils.parseEther("0.001");
-
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
-
-  await lock.deployed();
+  await election.deployed();
 
   console.log(
-    `Lock with ${ethers.utils.formatEther(lockedAmount)}ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
+    `Election with candidates [${candidates.join()}] deployed to ${election.address}`
   );
 }
 
