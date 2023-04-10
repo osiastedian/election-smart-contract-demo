@@ -17,6 +17,7 @@ contract Election {
     event VoteSubmitted(address candidate, address voter);
     event VoterRegistered(address voter);
     event Closed(uint timestamp);
+    event TransferredOwnership(address newOwner);
 
     modifier notClosed() {
         require(!isClosed, "Election has already closed");
@@ -26,6 +27,11 @@ contract Election {
     modifier onlyOwner() {
         require(msg.sender == owner, "Unauthorized");
         _;
+    }
+
+    function transferOwnership(address newOwner) onlyOwner external {
+        owner = payable(newOwner);
+        emit TransferredOwnership(newOwner);
     }
 
     constructor(address[] memory _candidates, uint _registrationFee) {
